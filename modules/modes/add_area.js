@@ -10,13 +10,14 @@ import { modeDrawArea } from './index';
 import { osmNode, osmWay } from '../osm';
 
 
-export function modeAddArea(context) {
+export function modeAddArea(context, option) {
     var mode = {
         id: 'add-area',
         button: 'area',
         title: t('modes.add_area.title'),
         description: t('modes.add_area.description'),
-        key: '3'
+        key: '3',
+        option: option
     };
 
     var behavior = behaviorAddWay(context)
@@ -46,7 +47,7 @@ export function modeAddArea(context) {
             actionClose(way.id)
         );
 
-        context.enter(modeDrawArea(context, way.id, startGraph));
+        context.enter(modeDrawArea(context, way.id, startGraph, mode.option));
     }
 
 
@@ -63,7 +64,7 @@ export function modeAddArea(context) {
             actionAddMidpoint({ loc: loc, edge: edge }, node)
         );
 
-        context.enter(modeDrawArea(context, way.id, startGraph));
+        context.enter(modeDrawArea(context, way.id, startGraph. mode.option));
     }
 
 
@@ -77,7 +78,7 @@ export function modeAddArea(context) {
             actionClose(way.id)
         );
 
-        context.enter(modeDrawArea(context, way.id, startGraph));
+        context.enter(modeDrawArea(context, way.id, startGraph, mode.option));
     }
 
 
@@ -87,6 +88,7 @@ export function modeAddArea(context) {
 
 
     mode.exit = function() {
+        mode.option = option;
         context.uninstall(behavior);
     };
 

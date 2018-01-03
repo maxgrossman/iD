@@ -2,10 +2,11 @@ import { t } from '../util/locale';
 import { behaviorDrawWay } from '../behavior';
 
 
-export function modeDrawArea(context, wayId, startGraph) {
+export function modeDrawArea(context, wayId, startGraph, option) {
     var mode = {
         button: 'area',
-        id: 'draw-area'
+        id: 'draw-area',
+        option: option
     };
 
     var behavior;
@@ -19,14 +20,14 @@ export function modeDrawArea(context, wayId, startGraph) {
 
         var addNode = behavior.addNode;
 
-        behavior.addNode = function(node) {
+        behavior.addNode = function(node, more) {
             var length = way.nodes.length;
             var penultimate = length > 2 ? way.nodes[length - 2] : null;
 
             if (node.id === way.first() || node.id === penultimate) {
                 behavior.finish();
             } else {
-                addNode(node);
+                addNode(node, more);
             }
         };
 

@@ -2,10 +2,11 @@ import { t } from '../util/locale';
 import { behaviorDrawWay } from '../behavior';
 
 
-export function modeDrawLine(context, wayId, startGraph, affix) {
+export function modeDrawLine(context, wayId, startGraph, affix, option) {
     var mode = {
         button: 'line',
-        id: 'draw-line'
+        id: 'draw-line',
+        option: option
     };
 
     var behavior;
@@ -16,15 +17,15 @@ export function modeDrawLine(context, wayId, startGraph, affix) {
         var index = (affix === 'prefix') ? 0 : undefined;
         var headId = (affix === 'prefix') ? way.first() : way.last();
 
-        behavior = behaviorDrawWay(context, wayId, index, mode, startGraph)
+        behavior = behaviorDrawWay(context, wayId, (option === 'draw-orthogonal' ? undefined : index), mode, startGraph)
             .tail(t('modes.draw_line.tail'));
 
         var addNode = behavior.addNode;
-        behavior.addNode = function(node) {
+        behavior.addNode = function(node, more) {
             if (node.id === headId) {
                 behavior.finish();
             } else {
-                addNode(node);
+                addNode(node, more);
             }
         };
 

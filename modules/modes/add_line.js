@@ -10,13 +10,14 @@ import { modeDrawLine } from './index';
 import { osmNode, osmWay } from '../osm';
 
 
-export function modeAddLine(context) {
+export function modeAddLine(context, option) {
     var mode = {
         id: 'add-line',
         button: 'line',
         title: t('modes.add_line.title'),
         description: t('modes.add_line.description'),
-        key: '2'
+        key: '2',
+        option: option
     };
 
     var behavior = behaviorAddWay(context)
@@ -31,13 +32,22 @@ export function modeAddLine(context) {
             node = osmNode({ loc: loc }),
             way = osmWay();
 
-        context.perform(
-            actionAddEntity(node),
-            actionAddEntity(way),
-            actionAddVertex(way.id, node.id)
-        );
+        if (mode.option === 'draw-orthogonal') {
+            context.perform(
+                actionAddEntity(node),
+                actionAddEntity(way),
+                actionAddVertex(way.id, node.id),
+                actionAddVertex(way.id, node.id)
+            );
+        } else {
+            context.perform(
+                actionAddEntity(node),
+                actionAddEntity(way),
+                actionAddVertex(way.id, node.id)
+            );
+        }
 
-        context.enter(modeDrawLine(context, way.id, startGraph));
+        context.enter(modeDrawLine(context, way.id, startGraph, mode.option));
     }
 
 
@@ -46,14 +56,24 @@ export function modeAddLine(context) {
             node = osmNode({ loc: loc }),
             way = osmWay();
 
-        context.perform(
-            actionAddEntity(node),
-            actionAddEntity(way),
-            actionAddVertex(way.id, node.id),
-            actionAddMidpoint({ loc: loc, edge: edge }, node)
-        );
+        if (mode.option === 'draw-orthogonal') {
+            context.perform(
+                actionAddEntity(node),
+                actionAddEntity(way),
+                actionAddVertex(way.id, node.id),
+                actionAddVertex(way.id, node.id),
+                actionAddMidpoint({ loc: loc, edge: edge}, node)
+            );
+        } else {
+            context.perform(
+                actionAddEntity(node),
+                actionAddEntity(way),
+                actionAddVertex(way.id, node.id),
+                actionAddMidpoint({ loc: loc, edge: edge }, node)
+            );
+        }
 
-        context.enter(modeDrawLine(context, way.id, startGraph));
+        context.enter(modeDrawLine(context, way.id, startGraph, mode.option));
     }
 
 
@@ -61,12 +81,20 @@ export function modeAddLine(context) {
         var startGraph = context.graph(),
             way = osmWay();
 
-        context.perform(
-            actionAddEntity(way),
-            actionAddVertex(way.id, node.id)
-        );
+        if (mode.option === 'draw-orthogonal') {
+            context.perform(
+                actionAddEntity(way),
+                actionAddVertex(way.id, node.id),
+                actionAddVertex(way.id, node.id)
+            );
+        } else {
+            context.perform(
+                actionAddEntity(way),
+                actionAddVertex(way.id, node.id)
+            );
+        }
 
-        context.enter(modeDrawLine(context, way.id, startGraph));
+        context.enter(modeDrawLine(context, way.id, startGraph, mode.option));
     }
 
 
@@ -76,6 +104,7 @@ export function modeAddLine(context) {
 
 
     mode.exit = function() {
+        mode.option = option;
         context.uninstall(behavior);
     };
 

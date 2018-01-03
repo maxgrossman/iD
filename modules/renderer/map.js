@@ -60,6 +60,7 @@ export function rendererMap(context) {
         transformStart = projection.transform(),
         transformLast,
         transformed = false,
+        vertexHoverEnabled = true,
         minzoom = 0,
         drawLayers = svgLayers(projection, context),
         drawPoints = svgPoints(projection, context),
@@ -180,7 +181,7 @@ export function rendererMap(context) {
                 mousemove = d3_event;
             })
             .on('mouseover.vertices', function() {
-                if (map.editable() && !transformed) {
+                if (vertexHoverEnabled && map.editable() && !transformed) {
                     var hover = d3_event.target.__data__;
                     surface.selectAll('.data-layer-osm')
                         .call(drawVertices.drawHover, context.graph(), hover, map.extent());
@@ -188,7 +189,7 @@ export function rendererMap(context) {
                 }
             })
             .on('mouseout.vertices', function() {
-                if (map.editable() && !transformed) {
+                if (vertexHoverEnabled && map.editable() && !transformed) {
                     var hover = d3_event.relatedTarget && d3_event.relatedTarget.__data__;
                     surface.selectAll('.data-layer-osm')
                         .call(drawVertices.drawHover, context.graph(), hover, map.extent());
@@ -818,6 +819,12 @@ export function rendererMap(context) {
     map.minzoom = function(_) {
         if (!arguments.length) return minzoom;
         minzoom = _;
+        return map;
+    };
+
+    map.vertexHoverEnabled = function(_) {
+        if (!arguments.length) return vertexHoverEnabled;
+        vertexHoverEnabled = _;
         return map;
     };
 

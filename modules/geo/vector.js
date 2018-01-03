@@ -60,3 +60,11 @@ export function geoVecCross(a, b, origin) {
         (a[1] - origin[1]) * (b[0] - origin[0]);
 }
 
+// returns vector perpendicular to a, b 
+// scaled by a provide `mag`, or magnitude 
+export function geoVecPerp(a, b, mag, len) {
+    return len === 0 ? [0, 0] : [
+        ((b[1] - a[1]) / len) * mag,
+        ((b[0] - a[0]) / len) * mag * -1
+    ];
+}
