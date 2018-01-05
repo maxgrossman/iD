@@ -66,17 +66,15 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
         actionAddEntity(segment);
     }
 
-    if (!isOrthogonal) {
-        // Push an annotated state for undo to return back to.
-        // We must make sure to remove this edit later.
-        context.perform(actionNoop(), annotation);
-        _tempEdits++;
+    // Push an annotated state for undo to return back to.
+    // We must make sure to remove this edit later.
+    context.perform(actionNoop(), annotation);
+    _tempEdits++;
 
-        // Add the drawing node to the graph.
-        // We must make sure to remove this edit later.
-        context.perform(_actionAddDrawNode());
-        _tempEdits++;
-    }
+    // Add the drawing node to the graph.
+    // We must make sure to remove this edit later.
+    context.perform(_actionAddDrawNode());
+    _tempEdits++;
 
     // related code
     // - `mode/drag_node.js`     `doMode()`
@@ -85,21 +83,39 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
 
     function moveNew(targets) {
         for (var i = 0; i < targets.length; i++) {
-            var entity = targets[i].entity;
+            var datum = targets[i].entity;
+            var nodeLoc = datum && datum.properties && datum.properties.entity  && datum.properties.entity.loc;
+            var nodeGroups = datum && datum.properties && datum.properties.nodes;
             var loc = targets[i].loc;
             var point = targets[i].point;
             var selfNode = isOrthogonal ? [ortho1.id, ortho2.id][i] : end.id;
             var selfWay = (isOrthogonal || isClosed) ? wayId : segment.id;
 
-            if (entity) { // snap to target entity unless dealing with it's self...
-                if (entity.type === 'node' && entity.id !== selfNode) {
-                    loc = entity.loc;
-                } else if (entity.type === 'way' && entity.id !== selfWay) {
-                    loc = geoChooseEdge(context.childNodes(entity), point, context.projection).loc;
+            // if (entity) { // snap to target entity unless dealing with it's self...
+            //     if (entity.type === 'node' && entity.id !== selfNode) {
+            //         loc = entity.loc;
+            //     } else if (entity.type === 'way' && entity.id !== selfWay) {
+            //         loc = geoChooseEdge(context.childNodes(entity), point, context.projection).loc;
+            //     }
+            // }
+
+            if (nodeLoc && datum.id !== selfNode) { // snap to node/vertex - a point target with `.loc`
+                loc = nodeLoc;
+            
+            } else if (nodeGroups && datum.id !== selfWay) { // snap to way - a line target with `.nodes
+                var best = Infinity;
+                for (var j = 0; j < nodeGroups.length; j++) {
+                    var childNodes = nodeGroups[i].map(function(id) { return context.entity(id); });
+                    var choice = geoChooseEdge(childNodes, context.mouse(), context.projection, end.id);
+                    if (choice && choice.distance < best) {
+                        best = choice.distance;
+                        loc = choice.loc;
+                    }
                 }
             }
 
             context.replace(actionMoveNode(selfNode, loc));
+            end = context.entity(end.id);
         }
     }
 
