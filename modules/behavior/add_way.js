@@ -14,7 +14,8 @@ export function behaviorAddWay(context) {
             .on('clickWay', function() { dispatch.apply('startFromWay', this, arguments); })
             .on('clickNode', function() { dispatch.apply('startFromNode', this, arguments); })
             .on('cancel', addWay.cancel)
-            .on('finish', addWay.cancel);
+            .on('finish', addWay.cancel)
+            .startSegment(null);
 
         context.map()
             .dblclickEnable(false);

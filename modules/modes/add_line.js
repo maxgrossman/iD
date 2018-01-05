@@ -19,7 +19,6 @@ export function modeAddLine(context, option) {
         key: '2',
         option: option
     };
-
     var behavior = behaviorAddWay(context)
         .tail(t('modes.add_line.tail'))
         .on('start', start)
@@ -47,7 +46,7 @@ export function modeAddLine(context, option) {
             );
         }
 
-        context.enter(modeDrawLine(context, way.id, startGraph, mode.option));
+        context.enter(modeDrawLine(context, way.id, startGraph, undefined, mode.option));
     }
 
 
@@ -73,7 +72,7 @@ export function modeAddLine(context, option) {
             );
         }
 
-        context.enter(modeDrawLine(context, way.id, startGraph, mode.option));
+        context.enter(modeDrawLine(context, way.id, startGraph, undefined, mode.option));
     }
 
 
@@ -94,7 +93,7 @@ export function modeAddLine(context, option) {
             );
         }
 
-        context.enter(modeDrawLine(context, way.id, startGraph, mode.option));
+        context.enter(modeDrawLine(context, way.id, startGraph, undefined, mode.option));
     }
 
 

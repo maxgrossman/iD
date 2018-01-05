@@ -34,7 +34,8 @@ var _lastSpace = null;
 
 export function behaviorDraw(context) {
     var dispatch = d3_dispatch(
-        'move', 'click', 'clickWay', 'clickNode', 'clickTargets', 'undo', 'cancel', 'finish'
+        'move', 'click', 'clickWay', 'clickNode', 
+        'clickTargets', 'undo', 'cancel', 'finish'
     );
 
     var keybinding = d3_keybinding('draw');
@@ -101,11 +102,12 @@ export function behaviorDraw(context) {
             });
         } else {
             var d;
-            if (d3_event.type === 'keydown') {
+            if (d3_event.type === 'keydown' && !d3_event.shiftKey) {
                 d = _lastMouse && _lastMouse.target && _lastMouse.target.__data__;
             } else {
                 d = d3_event.target && d3_event.target.__data__;
             }
+
             d = (d && d.properties && d.properties.target) ? d : {};
             return [{ 
                 entity: altKey ? null : d,
@@ -144,8 +146,6 @@ export function behaviorDraw(context) {
         }
 
         var mode = context.mode();
-
-        // if 
         if (d3_event.shiftKey && (mode.id === 'add-area' || mode.id === 'add-line')) {
             mode.option = 'draw-orthogonal';
             d3_event.preventDefault();
@@ -153,7 +153,6 @@ export function behaviorDraw(context) {
             click();
 
         } else {
-
             var element = d3_select(this);
             var touchId = d3_event.touches ? d3_event.changedTouches[0].identifier : null;
             var t1 = +new Date();
@@ -166,8 +165,8 @@ export function behaviorDraw(context) {
                 var p2 = point();
                 var dist = geoVecLength(p1, p2);
 
-                element.on('mousemove.draw', mousemove);
                 d3_select(window).on('mouseup.draw', null);
+                element.on('mousemove.draw', mousemove);
 
                 if (dist < closeTolerance || (dist < tolerance && (t2 - t1) < 500)) {
                     // Prevent a quick second click
@@ -194,8 +193,7 @@ export function behaviorDraw(context) {
     }
 
     function needsSegment() {
-        return context.mode().option === 'draw-orthogonal' &&
-            startSegment.length < 2;
+        return context.mode().option === 'draw-orthogonal' && startSegment.length < 2;
     }
 
     function mouseup() {
@@ -227,7 +225,6 @@ export function behaviorDraw(context) {
         var d = targets[0];
         var e = d.entity;
         var target = e && e.id && context.hasEntity(e.id);
-
         var trySnap = geoViewportEdge(context.mouse(), context.map().dimensions()) === null;
         if (trySnap) {
             if (target && target.type === 'way') { // Snap to way
@@ -243,7 +240,7 @@ export function behaviorDraw(context) {
                 if (needsSegment()) startSegment.push(target.loc);
                 dispatch.call('clickNode', this, target);
             } else { // handle as regular click if snap tries fail...
-                if (needsSegment) startSegment.push(d.loc);
+                if (needsSegment()) startSegment.push(d.loc);
                 dispatch.call('click', this, d.loc);
             }
         }
@@ -302,7 +299,7 @@ export function behaviorDraw(context) {
     function draw(selection) {
         if (context.mode().option === 'draw-orthogonal' && startSegment.length === 2) {
             hover = null;
-            context.map().vertexHoverEnable(false);
+            context.map().vertexHoverEnabled(true);
         } else {
             context.install(hover);
         }
@@ -348,7 +345,7 @@ export function behaviorDraw(context) {
         if (hover) {
             context.uninstall(hover);
         } else {
-            context.map().vertexHoverEnable(true);
+            context.map().vertexHoverEnabled(true);
         }
 
         context.uninstall(edit);
@@ -386,7 +383,7 @@ export function behaviorDraw(context) {
         if (!arguments.length) return startSegment;
         startSegment = _ || [];
         return draw;
-    }
+    };
 
 
     return utilRebind(draw, dispatch, 'on');

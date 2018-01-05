@@ -19,7 +19,7 @@ export function modeAddArea(context, option) {
         key: '3',
         option: option
     };
-
+    
     var behavior = behaviorAddWay(context)
             .tail(t('modes.add_area.tail'))
             .on('start', start)
