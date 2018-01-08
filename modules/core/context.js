@@ -487,6 +487,5 @@ export function coreContext() {
     presets.init();
     areaKeys = presets.areaKeys();
 
-
     return utilRebind(context, dispatch, 'on');
 }

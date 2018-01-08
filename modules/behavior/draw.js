@@ -89,9 +89,12 @@ export function behaviorDraw(context) {
             var q0 = geoVecAdd(p0, perpVec);
             var q1 = geoVecAdd(p1, perpVec);
             var points = [q1, q0];
+            
             return _map(points, function(p) {
                 var target = document.elementFromPoint(p[0] + surface.left, p[1] + surface.top);
+                console.log(target);
                 var data = target && target.__data__;
+                console.log(data);
                 var entity = data instanceof osmEntity ? data : null;
 
                 return {
@@ -147,6 +150,7 @@ export function behaviorDraw(context) {
 
         var mode = context.mode();
         if (d3_event.shiftKey && (mode.id === 'add-area' || mode.id === 'add-line')) {
+        // if (d3_event.shiftKey && (mode.id === 'add-area')) {
             mode.option = 'draw-orthogonal';
             d3_event.preventDefault();
             d3_event.stopPropagation();

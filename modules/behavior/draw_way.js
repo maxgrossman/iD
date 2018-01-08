@@ -82,6 +82,9 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     // - `behavior/draw_way.js`  `move()`
 
     function moveNew(targets) {
+        // console.log(Date.now());
+        // console.log(context.mode());
+        // console.log(context.history().graph());
         for (var i = 0; i < targets.length; i++) {
             var datum = targets[i].entity;
             var nodeLoc = datum && datum.properties && datum.properties.entity  && datum.properties.entity.loc;
@@ -116,6 +119,9 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
 
             context.replace(actionMoveNode(selfNode, loc));
             end = context.entity(end.id);
+
+            var doBlock = invalidGeometry(end, context.graph());
+            context.surface().classed('nope', doBlock);
         }
     }
 
@@ -220,6 +226,9 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
         // Drawing was interrupted unexpectedly.
         // This can happen if the user changes modes,
         // clicks geolocate button, a hashchange event occurs, etc.
+
+        // if (!finished) {}
+
         if (_tempEdits) {
             context.pop(_tempEdits);
             while (context.graph() !== startGraph) {
@@ -325,9 +334,9 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
 
     // Add multiple click targets, snapping to entities if neccessary...
     drawWay.addDatumTargets = function(targets) {
+        console.log(targets);
         var newIds = [];
         var entity, target, choice, edge, newNode, i;
-
         // Avoid making orthogonal shapew w/duplicate
         // nodes (like a line)...
         for (i = 0; i < targets.length; i++) {
@@ -335,7 +344,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             if (!entity) continue;
             if (entity.id === origWay.nodes[0] || entity.id === origWay.nodes[1]) return;
         }
-
         // for each target, 
         // create a node OR snap it to existing entity...
         for (i = 0; i < targets.length; i++) {
