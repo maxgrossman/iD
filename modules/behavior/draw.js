@@ -1,4 +1,6 @@
 import _map from 'lodash-es/map';
+import _indexOf from 'lodash-es/indexOf';
+import _min from 'lodash-es/min';
 
 import { dispatch as d3_dispatch } from 'd3-dispatch';
 
@@ -6,6 +8,7 @@ import {
     event as d3_event,
     mouse as d3_mouse,
     select as d3_select,
+    selectAll as d3_selectAll,
     touches as d3_touches
 } from 'd3-selection';
 
@@ -16,6 +19,7 @@ import { behaviorTail } from './tail';
 
 import {
     geoChooseEdge,
+    geoSphericalDistance,
     geoVecAdd,
     geoVecLength,
     geoVecPerp,
@@ -25,6 +29,7 @@ import {
 import { osmEntity } from '../osm';
 
 import { utilRebind } from '../util/rebind';
+import { icon } from '../ui/intro/helper';
 
 
 var _usedTails = {};
@@ -75,7 +80,6 @@ export function behaviorDraw(context) {
         var altKey = d3_event.altKey;
         var mousePoint = context.map().mouse();
         var mouseLoc = context.map().mouseCoordinates();
-
         // true when single way is drawn in `draw-orthogonal mode...
         if (context.mode().option === 'draw-orthogonal' && startSegment.length === 2) {
             var p0 = context.projection(startSegment[0]);
@@ -89,18 +93,32 @@ export function behaviorDraw(context) {
             var q0 = geoVecAdd(p0, perpVec);
             var q1 = geoVecAdd(p1, perpVec);
             var points = [q1, q0];
-            
-            return _map(points, function(p) {
-                var target = document.elementFromPoint(p[0] + surface.left, p[1] + surface.top);
-                console.log(target);
-                var data = target && target.__data__;
-                console.log(data);
-                var entity = data instanceof osmEntity ? data : null;
+            var candidates = d3_selectAll('.layer-osm.layer-points > .layer-points-targets > .node.active');
+
+            // TODO: Make the entity select more direct.
+            // current select sets target to closest`candidate`
+            // in `candidates`...
+            return _map(points, function(p, i) {
+
+                var pointLoc = context.projection.invert(p);
+                var candidateDistances = [], closestIndex, candidateTarget;
+
+                candidates.each(function(c) { 
+                    candidateDistances.push(geoSphericalDistance(c.geometry.coordinates, pointLoc)); 
+                });
+                
+                closestIndex = candidateDistances.indexOf(Math.min.apply(Math, candidateDistances));
+                candidates.each(function(c, i) { if (closestIndex === i) candidateTarget = c; });
+                
+                var d = candidateTarget && 
+                    candidateTarget.properties && 
+                    candidateTarget.properties.target ? candidateTarget : {};
+                var entity = d && d.properties.entity; 
 
                 return {
                     entity: altKey ? null : entity,
                     point: p.map(function(c) { return Math.floor(c); }),
-                    loc: context.projection.invert(p)
+                    loc: pointLoc
                 };
             });
         } else {
@@ -149,8 +167,8 @@ export function behaviorDraw(context) {
         }
 
         var mode = context.mode();
-        if (d3_event.shiftKey && (mode.id === 'add-area' || mode.id === 'add-line')) {
-        // if (d3_event.shiftKey && (mode.id === 'add-area')) {
+        // if (d3_event.shiftKey && (mode.id === 'add-area' || mode.id === 'add-line')) {
+        if (d3_event.shiftKey && (mode.id === 'add-area')) {
             mode.option = 'draw-orthogonal';
             d3_event.preventDefault();
             d3_event.stopPropagation();
