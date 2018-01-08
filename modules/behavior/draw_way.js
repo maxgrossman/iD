@@ -41,7 +41,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     if (isOrthogonal) {
         ortho1 = osmNode({ loc: context.entity(origWay.nodes[1]).loc });
         ortho2 = osmNode({ loc: context.entity(origWay.nodes[0]).loc });
-        console.log(ortho1);console.log(ortho2);
     } else {
         start = osmNode({ loc: context.entity(origWay.nodes[startIndex]).loc });
         end = osmNode({ loc: mouseCoord });
@@ -60,7 +59,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             actionAddVertex(wayId, ortho1.id, undefined),
             actionAddVertex(wayId, ortho2.id, undefined)
         );
-        console.log(context.history().graph());
     } else if (isClosed) {
         var f = context[origWay.isDegenerate() ? 'replace' : 'perform'];
         f(actionAddEntity(end),actionAddVertex(wayId, end.id, index));
@@ -78,6 +76,21 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     context.perform(_actionAddDrawNode());
     _tempEdits++;
 
+    function invalidGeometry(entity, graph) {
+        var parents = graph.parentWays(entity);
+
+        for (var i = 0; i < parents.length; i++) {
+            var parent = parents[i];
+            var nodes = parent.nodes.map(function(nodeID) { return graph.entity(nodeID); });
+            if (parent.isClosed()) {
+                if (geoHasSelfIntersections(nodes, entity.id)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
     // related code
     // - `mode/drag_node.js`     `doMode()`
     // - `behavior/draw.js`      `click()`
@@ -150,24 +163,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     //         .classed('nope', doBlock);
     // }
 
-
-    // function invalidGeometry(entity, graph) {
-    //     var parents = graph.parentWays(entity);
-
-    //     for (var i = 0; i < parents.length; i++) {
-    //         var parent = parents[i];
-    //         var nodes = parent.nodes.map(function(nodeID) { return graph.entity(nodeID); });
-    //         if (parent.isClosed()) {
-    //             if (geoHasSelfIntersections(nodes, entity.id)) {
-    //                 return true;
-    //             }
-    //         }
-    //     }
-
-    //     return false;
-    // }
-
-
     function undone() {
         // Undo popped the history back to the initial annotated no-op edit.
         // Remove initial no-op edit and whatever edit happened immediately before it.
@@ -200,7 +195,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             .on('undo', context.undo)
             .on('cancel', drawWay.cancel)
             .on('finish', drawWay.finish);
-
+            
         if (isOrthogonal) {
             behavior.startSegment([ortho2.loc, ortho1.loc]);
         }
@@ -284,7 +279,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
 
         context.perform(
             _actionAddDrawNode(),
-            // actionAddMidpoint({ loc: loc, edge: edge }, newNode),
             annotation
         );
 
@@ -334,11 +328,11 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
         var entity, target, choice, edge, newNode, i;
         // Avoid making orthogonal shape w/duplicate
         // nodes (like a line)...
-        // for (i = 0; i < targets.length; i++) {
-        //     entity = targets[i].entity;
-        //     if (!entity) continue;
-        //     if (entity.id === origWay.nodes[0] || entity.id === origWay.nodes[1]) return;
-        // }
+        for (i = 0; i < targets.length; i++) {
+            entity = targets[i].entity;
+            if (!entity) continue;
+            if (entity.id === origWay.nodes[0] || entity.id === origWay.nodes[1]) return;
+        }
         // for each target, 
         // create a node OR snap it to existing entity...
         for (i = 0; i < targets.length; i++) {
@@ -366,7 +360,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
                 }
             }
             
-            // replace the temporary nodes...
+            // replace the temporary nodes (if not already there?)...
             context.replace(function(graph) {
                 var newWay = origWay;
                 for (var i = 0; i < newIds.length; i++) {
