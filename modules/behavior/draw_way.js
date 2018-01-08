@@ -1,23 +1,29 @@
+import _clone from 'lodash-es/clone';
 import { t } from '../util/locale';
 
 import { event as d3_event } from 'd3-selection';
 
-import _clone from 'lodash-es/clone';
-
 import {
     actionAddMidpoint,
+    actionAddVertex,
+    actionChangeTags,
     actionMoveNode,
-    actionNoop
+    actionNoop,
 } from '../actions';
 
 import { behaviorDraw } from './draw';
-import { geoChooseEdge, geoHasSelfIntersections, geoVecAdd, geoExtent } from '../geo';
+import { 
+    geoChooseEdge, 
+    geoExtent,
+    geoHasSelfIntersections, 
+    geoVecAdd 
+} from '../geo';
+
 import { modeBrowse, modeSelect } from '../modes';
 import { osmNode, osmWay } from '../osm';
+
+import { utilEntitySelector } from '../util';
 import { actionAddEntity } from '../actions/add_entity';
-import { actionAddVertex } from '../actions/add_vertex';
-import { utilEntitySelector } from '../util/util';
-import { actionChangeTags } from '../actions/change_tags';
 
 
 export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
@@ -36,53 +42,110 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     var startIndex = isReversed ? 0 : origWay.nodes.length - 1;
     var start, end, ortho1, ortho2, segment;
 
-    var _tempEdits = 0;
+    end = osmNode({ loc: mouseCoord });
 
     if (isOrthogonal) {
-        ortho1 = osmNode({ loc: context.entity(origWay.nodes[1]).loc });
-        ortho2 = osmNode({ loc: context.entity(origWay.nodes[0]).loc });
-        console.log(ortho1);console.log(ortho2);
+        ortho1 = osmNode({ loc: context.graph().entity(origWay.nodes[1]).loc });
+        ortho2 = osmNode({ loc: context.graph().entity(origWay.nodes[0]).loc });
     } else {
-        start = osmNode({ loc: context.entity(origWay.nodes[startIndex]).loc });
-        end = osmNode({ loc: mouseCoord });
-        segment = osmWay({ 
-            nodes: isReversed ? [end.id, start.id] : [start.id, end.id],
+        start = osmNode({ loc: context.graph().entity(origWay.nodes[startIndex]).loc });    
+        segment = osmWay({
+            nodes: isReversed ? [start.id, end.id] : [end.id, start.id],
             tags: _clone(origWay.tags)
         });
     }
+        
+    var _tempEdits = 0;
 
-    end = osmNode({ loc: context.map().mouseCoordinates() });
     
-    if (isOrthogonal) {
-        context.replace(
-            actionAddEntity(ortho1),
-            actionAddEntity(ortho2),
-            actionAddVertex(wayId, ortho1.id, undefined),
-            actionAddVertex(wayId, ortho2.id, undefined)
-        );
-        console.log(context.history().graph());
-    } else if (isClosed) {
-        var f = context[origWay.isDegenerate() ? 'replace' : 'perform'];
-        f(actionAddEntity(end),actionAddVertex(wayId, end.id, index));
-    } else {
-        actionAddEntity(segment);
-    }
-
     // Push an annotated state for undo to return back to.
     // We must make sure to remove this edit later.
     context.perform(actionNoop(), annotation);
     _tempEdits++;
 
-    // Add the drawing node to the graph.
-    // We must make sure to remove this edit later.
-    context.perform(_actionAddDrawNode());
-    _tempEdits++;
+    if (!isOrthogonal) {
+        // Add the drawing node to the graph.
+        // We must make sure to remove this edit later.
+        context.perform(_actionAddDrawNode());
+        _tempEdits++;
+    }
+
+    var f = context[origWay.isDegenerate() ? 'replace' : 'perform'];
+    if (isOrthogonal) {
+        f(actionAddEntity(end));
+        context.replace(
+            actionAddEntity(ortho1),
+            actionAddEntity(ortho2),
+            actionAddVertex(wayId, ortho1.id, undefined),
+            actionAddVertex(wayId, ortho2.id, undefined));
+    } else if (isClosed) {
+        f(actionAddEntity(end),
+            actionAddVertex(wayId, end.id, index));
+    } else {
+        f(actionAddEntity(start),
+            actionAddEntity(end),
+            actionAddEntity(segment));
+    }
 
     // related code
     // - `mode/drag_node.js`     `doMode()`
     // - `behavior/draw.js`      `click()`
     // - `behavior/draw_way.js`  `move()`
+    // function move(datum) {
+    //     var nodeLoc = datum && datum.properties && datum.properties.entity && datum.properties.entity.loc;
+    //     var nodeGroups = datum && datum.properties && datum.properties.nodes;
+    //     var loc = context.map().mouseCoordinates();
 
+    //     if (nodeLoc) {   // snap to node/vertex - a point target with `.loc`
+    //         loc = nodeLoc;
+
+    //     } else if (nodeGroups) {   // snap to way - a line target with `.nodes`
+    //         var best = Infinity;
+    //         for (var i = 0; i < nodeGroups.length; i++) {
+    //             var childNodes = nodeGroups[i].map(function(id) { return context.entity(id); });
+    //             var choice = geoChooseEdge(childNodes, context.mouse(), context.projection, end.id);
+    //             if (choice && choice.distance < best) {
+    //                 best = choice.distance;
+    //                 loc = choice.loc;
+    //             }
+    //         }
+    //     }
+
+    //     context.replace(actionMoveNode(end.id, loc));
+	//     checkGeometry(true);
+
+    // }
+
+    // Check whether this edit causes the geometry to break.
+    // If so, class the surface with a nope cursor.
+    // `skipLast` - include closing segment in the check, see #4655
+    function checkGeometry(skipLast) {
+        var doBlock = isInvalidGeometry(end, context.graph(), skipLast);
+        context.surface()
+        .classed('nope', doBlock);
+    }
+
+    function isInvalidGeometry(entity, graph, skipLast) {
+        var parents = graph.parentWays(entity);
+
+        for (var i = 0; i < parents.length; i++) {
+            var parent = parents[i];
+            var nodes = parent.nodes.map(function(nodeID) { return graph.entity(nodeID); });
+            if (parent.isClosed()) {
+                if (skipLast)  nodes.pop();   // disregard closing segment - #4655
+                if (geoHasSelfIntersections(nodes, entity.id)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // related code
+    // - `mode/drag_node.js`     `doMode()`
+    // - `behavior/draw.js`      `click()`
+    // - `behavior/draw_way.js`  `move()`
     function moveNew(targets) {
         for (var i = 0; i < targets.length; i++) {
             var datum = targets[i].entity;
@@ -116,8 +179,9 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
                 }
             }
             context.replace(actionMoveNode(selfNode, loc));
-            var doBlock = invalidGeometry(end, context.graph());
-            context.surface().classed('nope', doBlock);
+            context.replace(actionMoveNode(end.id, loc));
+            end = context.entity(end.id);
+	        checkGeometry(true);
         }
     }
 
@@ -149,24 +213,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     //     context.surface()
     //         .classed('nope', doBlock);
     // }
-
-
-    // function invalidGeometry(entity, graph) {
-    //     var parents = graph.parentWays(entity);
-
-    //     for (var i = 0; i < parents.length; i++) {
-    //         var parent = parents[i];
-    //         var nodes = parent.nodes.map(function(nodeID) { return graph.entity(nodeID); });
-    //         if (parent.isClosed()) {
-    //             if (geoHasSelfIntersections(nodes, entity.id)) {
-    //                 return true;
-    //             }
-    //         }
-    //     }
-
-    //     return false;
-    // }
-
 
     function undone() {
         // Undo popped the history back to the initial annotated no-op edit.
@@ -202,7 +248,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             .on('finish', drawWay.finish);
 
         if (isOrthogonal) {
-            behavior.startSegment([ortho2.loc, ortho1.loc]);
+            behavior.startSegment([ortho1, ortho2]);
         }
 
         context.map()
@@ -222,10 +268,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
         // Drawing was interrupted unexpectedly.
         // This can happen if the user changes modes,
         // clicks geolocate button, a hashchange event occurs, etc.
-
-        // if (!finished) {}
-
-        if (_tempEdits) {
+        if (_tempEdits && !isOrthogonal) {
             context.pop(_tempEdits);
             while (context.graph() !== startGraph) {
                 context.pop();
@@ -284,10 +327,10 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
 
         context.perform(
             _actionAddDrawNode(),
-            // actionAddMidpoint({ loc: loc, edge: edge }, newNode),
             annotation
         );
 
+        checkGeometry(false);   // skipLast = false
         context.enter(mode);
     };
 
@@ -307,6 +350,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             annotation
         );
 
+        checkGeometry(false);   // skipLast = false
         context.enter(mode);
     };
 
@@ -325,6 +369,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             annotation
         );
 
+        checkGeometry(false);   // skipLast = false
         context.enter(mode);
     };
 
@@ -334,11 +379,11 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
         var entity, target, choice, edge, newNode, i;
         // Avoid making orthogonal shape w/duplicate
         // nodes (like a line)...
-        // for (i = 0; i < targets.length; i++) {
-        //     entity = targets[i].entity;
-        //     if (!entity) continue;
-        //     if (entity.id === origWay.nodes[0] || entity.id === origWay.nodes[1]) return;
-        // }
+        for (i = 0; i < targets.length; i++) {
+            entity = targets[i].entity;
+            if (!entity) continue;
+            if (entity.id === origWay.nodes[0] || entity.id === origWay.nodes[1]) return;
+        }
         // for each target, 
         // create a node OR snap it to existing entity...
         for (i = 0; i < targets.length; i++) {
@@ -366,44 +411,43 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
                 }
             }
             
-            // replace the temporary nodes...
-            context.replace(function(graph) {
-                var newWay = origWay;
-                for (var i = 0; i < newIds.length; i++) {
-                    newWay = newWay.addNode(newIds[i], undefined);
-                }
-                return graph
-                    .replace(newWay);
+        }
+        
+        // replace the temporary nodes if they exist..
+        context.replace(function(graph) {
+            var newWay = origWay, index;
+            for (var i = 0; i < newIds.length; i++) {
+                newWay = newWay.addNode(newIds[i], undefined);
+            }
+            return graph
+                .replace(newWay);
+        });
+        // try to snap nearby nodes onto the new shape...
+        if (!d3_event.altKey) {
+            var pad = 3;
+            var proj = context.projection;
+            var newWay = context.entity(wayId);
+            var extent = newWay.extent(context.graph());
+            var min = geoVecAdd(proj(extent[0]), [ -pad,  pad ]);
+            var max = geoVecAdd(proj(extent[1]), [  pad, -pad ]);
+            var padExtent = geoExtent(proj.invert(min), proj.invert(max));
+                
+            var testNodes = context.intersects(padExtent).filter(function(entity) {
+                return entity.type === 'node' && newWay.nodes.indexOf(entity.id) === -1;
             });
 
-            // try to snap nearby nodes onto the new shape...
-            if (!d3_event.altKey) {
-                var pad = 3;
-                var proj = context.projection;
-                var newWay = context.entity(wayId);
-                var extent = newWay.extent(context.graph());
-                var min = geoVecAdd(proj(extent[0]), [ -pad,  pad ]);
-                var max = geoVecAdd(proj(extent[1]), [  pad, -pad ]);
-                var padExtent = geoExtent(proj.invert(min), proj.invert(max));
-                
-                var testNodes = context.intersects(padExtent).filter(function(entity) {
-                    return entity.type === 'node' && newWay.nodes.indexOf(entity.id) === -1;
-                });
-
-                for (i = 0; i < testNodes.length; i++) {
-                    choice = geoChooseEdge(context.childNodes(newWay), proj(testNodes[i].loc), proj);
-                    if (choice.distance < pad) {
-                        edge = [newWay.nodes[choice.index -1], newWay.nodes[choice.index]];
-                        context.replace(actionAddMidpoint({ loc: choice.loc, edge: edge}, testNodes[i]));
-                    }
+            for (i = 0; i < testNodes.length; i++) {
+                choice = geoChooseEdge(context.childNodes(newWay), proj(testNodes[i].loc), proj);
+                if (choice.distance < pad) {
+                    edge = [newWay.nodes[choice.index -1], newWay.nodes[choice.index]];
+                    context.replace(actionAddMidpoint({ loc: choice.loc, edge: edge}, testNodes[i]));
                 }
             }
-
-            context.perform(actionChangeTags(wayId, { building: 'yes' }));
-            
-            finished = true;
-            context.enter(modeBrowse(context));
         }
+
+        context.perform(actionChangeTags(wayId, { building: 'yes' }));
+        checkGeometry(true);
+        context.enter(modeSelect(context, [wayId]).newFeature(true));
     };
 
 
@@ -411,6 +455,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     // If the way has enough nodes to be valid, it's selected.
     // Otherwise, delete everything and return to browse mode.
     drawWay.finish = function() {
+        checkGeometry(false);   // skipLast = false
         if (context.surface().classed('nope')) {
             return;   // can't click here
         }

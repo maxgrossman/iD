@@ -82,8 +82,8 @@ export function behaviorDraw(context) {
         var mouseLoc = context.map().mouseCoordinates();
         // true when single way is drawn in `draw-orthogonal mode...
         if (context.mode().option === 'draw-orthogonal' && startSegment.length === 2) {
-            var p0 = context.projection(startSegment[0]);
-            var p1 = context.projection(startSegment[1]);
+            var p0 = context.projection(startSegment[0].loc);
+            var p1 = context.projection(startSegment[1].loc);
             var surface = context.surfaceRect();
             var theta = Math.atan2(p1[1] - mousePoint[1], p1[0] - mousePoint[0]) -
                 Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
@@ -92,9 +92,8 @@ export function behaviorDraw(context) {
             var perpVec = geoVecPerp(p0, p1, height, len);
             var q0 = geoVecAdd(p0, perpVec);
             var q1 = geoVecAdd(p1, perpVec);
-            var points = [q1, q0];
+            var points = [q0, q1];
             var candidates = d3_selectAll('.layer-osm.layer-points > .layer-points-targets > .node.active');
-
             // TODO: Make the entity select more direct.
             // current select sets target to closest`candidate`
             // in `candidates`...
@@ -109,7 +108,7 @@ export function behaviorDraw(context) {
                 
                 closestIndex = candidateDistances.indexOf(Math.min.apply(Math, candidateDistances));
                 candidates.each(function(c, i) { if (closestIndex === i) candidateTarget = c; });
-                
+
                 var d = candidateTarget && 
                     candidateTarget.properties && 
                     candidateTarget.properties.target ? candidateTarget : {};
@@ -167,8 +166,7 @@ export function behaviorDraw(context) {
         }
 
         var mode = context.mode();
-        // if (d3_event.shiftKey && (mode.id === 'add-area' || mode.id === 'add-line')) {
-        if (d3_event.shiftKey && (mode.id === 'add-area')) {
+        if (d3_event.shiftKey && (mode.id === 'add-area' || mode.id === 'add-line')) {
             mode.option = 'draw-orthogonal';
             d3_event.preventDefault();
             d3_event.stopPropagation();

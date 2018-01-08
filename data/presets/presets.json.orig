@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 {
     "presets": {
         "aerialway": {
@@ -95720,3 +95722,4 @@
         }
     }
 }
+>>>>>>> building-tool-2.5-mergin

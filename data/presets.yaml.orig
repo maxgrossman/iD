@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 en:
   presets:
     categories:
@@ -5709,3 +5711,4 @@ en:
         # waterway=weir
         name: Weir
         terms: '<translate with synonyms or related terms for ''Weir'', separated by commas>'
+>>>>>>> building-tool-2.5-mergin

@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 {
     "fields": {
         "access_simple": {
@@ -2231,3 +2233,4 @@
         }
     }
 }
+>>>>>>> building-tool-2.5-mergin
