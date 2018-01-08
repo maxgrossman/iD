@@ -1,9 +1,5 @@
 import { t } from '../util/locale';
 
-import { event as d3_event } from 'd3-selection';
-
-import _clone from 'lodash-es/clone';
-
 import {
     actionAddMidpoint,
     actionMoveNode,
@@ -11,13 +7,11 @@ import {
 } from '../actions';
 
 import { behaviorDraw } from './draw';
-import { geoChooseEdge, geoHasSelfIntersections, geoVecAdd, geoExtent } from '../geo';
+import { geoChooseEdge, geoHasSelfIntersections } from '../geo';
 import { modeBrowse, modeSelect } from '../modes';
-import { osmNode, osmWay } from '../osm';
-import { actionAddEntity } from '../actions/add_entity';
-import { actionAddVertex } from '../actions/add_vertex';
-import { utilEntitySelector } from '../util/util';
-import { actionChangeTags } from '../actions/change_tags';
+import { osmNode } from '../osm';
+
+import { utilEntitySelector } from '../util';
 
 
 export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
@@ -38,33 +32,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
 
     var _tempEdits = 0;
 
-    if (isOrthogonal) {
-        ortho1 = osmNode({ loc: context.entity(origWay.nodes[1]).loc });
-        ortho2 = osmNode({ loc: context.entity(origWay.nodes[0]).loc });
-    } else {
-        start = osmNode({ loc: context.entity(origWay.nodes[startIndex]).loc });
-        end = osmNode({ loc: mouseCoord });
-        segment = osmWay({ 
-            nodes: isReversed ? [end.id, start.id] : [start.id, end.id],
-            tags: _clone(origWay.tags)
-        });
-    }
-
-    end = osmNode({ loc: context.map().mouseCoordinates() });
-    
-    if (isOrthogonal) {
-        context.replace(
-            actionAddEntity(ortho1),
-            actionAddEntity(ortho2),
-            actionAddVertex(wayId, ortho1.id, undefined),
-            actionAddVertex(wayId, ortho2.id, undefined)
-        );
-    } else if (isClosed) {
-        var f = context[origWay.isDegenerate() ? 'replace' : 'perform'];
-        f(actionAddEntity(end),actionAddVertex(wayId, end.id, index));
-    } else {
-        actionAddEntity(segment);
-    }
+    var end = osmNode({ loc: context.map().mouseCoordinates() });
 
     // Push an annotated state for undo to return back to.
     // We must make sure to remove this edit later.
@@ -76,13 +44,54 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     context.perform(_actionAddDrawNode());
     _tempEdits++;
 
-    function invalidGeometry(entity, graph) {
+
+    // related code
+    // - `mode/drag_node.js`     `doMode()`
+    // - `behavior/draw.js`      `click()`
+    // - `behavior/draw_way.js`  `move()`
+    function move(datum) {
+        var nodeLoc = datum && datum.properties && datum.properties.entity && datum.properties.entity.loc;
+        var nodeGroups = datum && datum.properties && datum.properties.nodes;
+        var loc = context.map().mouseCoordinates();
+
+        if (nodeLoc) {   // snap to node/vertex - a point target with `.loc`
+            loc = nodeLoc;
+
+        } else if (nodeGroups) {   // snap to way - a line target with `.nodes`
+            var best = Infinity;
+            for (var i = 0; i < nodeGroups.length; i++) {
+                var childNodes = nodeGroups[i].map(function(id) { return context.entity(id); });
+                var choice = geoChooseEdge(childNodes, context.mouse(), context.projection, end.id);
+                if (choice && choice.distance < best) {
+                    best = choice.distance;
+                    loc = choice.loc;
+                }
+            }
+        }
+
+        context.replace(actionMoveNode(end.id, loc));
+        end = context.entity(end.id);
+	    checkGeometry(true);
+
+    }
+
+    // Check whether this edit causes the geometry to break.
+    // If so, class the surface with a nope cursor.
+    // `skipLast` - include closing segment in the check, see #4655
+    function checkGeometry(skipLast) {
+        var doBlock = isInvalidGeometry(end, context.graph(), skipLast);
+        context.surface()
+        .classed('nope', doBlock);
+    }
+
+    function isInvalidGeometry(entity, graph, skipLast) {
         var parents = graph.parentWays(entity);
 
         for (var i = 0; i < parents.length; i++) {
             var parent = parents[i];
             var nodes = parent.nodes.map(function(nodeID) { return graph.entity(nodeID); });
             if (parent.isClosed()) {
+                if (skipLast)  nodes.pop();   // disregard closing segment - #4655
                 if (geoHasSelfIntersections(nodes, entity.id)) {
                     return true;
                 }
@@ -129,8 +138,9 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
                 }
             }
             context.replace(actionMoveNode(selfNode, loc));
-            var doBlock = invalidGeometry(end, context.graph());
-            context.surface().classed('nope', doBlock);
+            context.replace(actionMoveNode(end.id, loc));
+            end = context.entity(end.id);
+	        checkGeometry(true);
         }
     }
 
@@ -195,10 +205,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             .on('undo', context.undo)
             .on('cancel', drawWay.cancel)
             .on('finish', drawWay.finish);
-            
-        if (isOrthogonal) {
-            behavior.startSegment([ortho2.loc, ortho1.loc]);
-        }
 
         context.map()
             .dblclickEnable(false)
@@ -217,9 +223,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
         // Drawing was interrupted unexpectedly.
         // This can happen if the user changes modes,
         // clicks geolocate button, a hashchange event occurs, etc.
-
-        // if (!finished) {}
-
         if (_tempEdits) {
             context.pop(_tempEdits);
             while (context.graph() !== startGraph) {
@@ -282,6 +285,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             annotation
         );
 
+        checkGeometry(false);   // skipLast = false
         context.enter(mode);
     };
 
@@ -301,6 +305,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             annotation
         );
 
+        checkGeometry(false);   // skipLast = false
         context.enter(mode);
     };
 
@@ -319,6 +324,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             annotation
         );
 
+        checkGeometry(false);   // skipLast = false
         context.enter(mode);
     };
 
@@ -405,6 +411,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
     // If the way has enough nodes to be valid, it's selected.
     // Otherwise, delete everything and return to browse mode.
     drawWay.finish = function() {
+        checkGeometry(false);   // skipLast = false
         if (context.surface().classed('nope')) {
             return;   // can't click here
         }

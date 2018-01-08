@@ -464,22 +464,28 @@
             "title": "Background",
             "description": "Background settings",
             "key": "B",
-            "percent_brightness": "{opacity}% brightness",
+            "backgrounds": "Backgrounds",
             "none": "None",
             "best_imagery": "Best known imagery source for this location",
             "switch": "Switch back to this background",
             "custom": "Custom",
             "custom_button": "Edit custom background",
             "custom_prompt": "Enter a tile URL template. Valid tokens are:\n   - {zoom}/{z}, {x}, {y} for Z/X/Y tile scheme\n   - {ty} for flipped TMS-style Y coordinates\n   - {u} for quadtile scheme\n   - {switch:a,b,c} for DNS server multiplexing\n\nExample:\n{example}",
-            "fix_misalignment": "Adjust imagery offset",
-            "imagery_source_faq": "Where does this imagery come from?",
+            "overlays": "Overlays",
+            "imagery_source_faq": "Imagery Info / Report a Problem",
             "reset": "reset",
-            "offset": "Drag anywhere in the gray area below to adjust the imagery offset, or enter the offset values in meters.",
+            "display_options": "Display Options",
+            "brightness": "Brightness",
+            "contrast": "Contrast",
+            "saturation": "Saturation",
+            "sharpness": "Sharpness",
             "minimap": {
-                "description": "Minimap",
+                "description": "Show Minimap",
                 "tooltip": "Show a zoomed out map to help locate the area currently displayed.",
                 "key": "/"
-            }
+            },
+            "fix_misalignment": "Adjust imagery offset",
+            "offset": "Drag anywhere in the gray area below to adjust the imagery offset, or enter the offset values in meters."
         },
         "map_data": {
             "title": "Map Data",
@@ -576,6 +582,7 @@
             "status_code": "Server returned status code {code}",
             "unknown_error_details": "Please ensure you are connected to the internet.",
             "uploading": "Uploading changes to OpenStreetMap...",
+            "conflict_progress": "Checking for conflicts: {num} of {total}",
             "unsaved_changes": "You have unsaved changes",
             "conflict": {
                 "header": "Resolve conflicting edits",
@@ -2062,7 +2069,9 @@
                     "options": {
                         "undefined": "Assumed to be Yes",
                         "yes": "Yes",
-                        "no": "No"
+                        "no": "No",
+                        "reversible": "Reversible",
+                        "alternating": "Alternating"
                     }
                 },
                 "oneway": {
@@ -2070,7 +2079,9 @@
                     "options": {
                         "undefined": "Assumed to be No",
                         "yes": "Yes",
-                        "no": "No"
+                        "no": "No",
+                        "reversible": "Reversible",
+                        "alternating": "Alternating"
                     }
                 },
                 "opening_hours": {
@@ -3414,6 +3425,10 @@
                     "name": "Barn",
                     "terms": ""
                 },
+                "building/bungalow": {
+                    "name": "Bungalow",
+                    "terms": "home,detached"
+                },
                 "building/cabin": {
                     "name": "Cabin",
                     "terms": ""
@@ -3428,6 +3443,10 @@
                 },
                 "building/church": {
                     "name": "Church Building",
+                    "terms": ""
+                },
+                "building/civic": {
+                    "name": "Civic Building",
                     "terms": ""
                 },
                 "building/college": {
@@ -3448,6 +3467,10 @@
                 },
                 "building/dormitory": {
                     "name": "Dormitory",
+                    "terms": ""
+                },
+                "building/farm": {
+                    "name": "Farm Building",
                     "terms": ""
                 },
                 "building/garage": {
@@ -3506,6 +3529,10 @@
                     "name": "Roof",
                     "terms": ""
                 },
+                "building/ruins": {
+                    "name": "Building Ruins",
+                    "terms": ""
+                },
                 "building/school": {
                     "name": "School Building",
                     "terms": "academy,elementary school,middle school,high school"
@@ -3513,6 +3540,10 @@
                 "building/semidetached_house": {
                     "name": "Semi-Detached House",
                     "terms": "home,double,duplex,twin,family,residence,dwelling"
+                },
+                "building/service": {
+                    "name": "Service Building",
+                    "terms": ""
                 },
                 "building/shed": {
                     "name": "Shed",
@@ -3522,13 +3553,25 @@
                     "name": "Stable",
                     "terms": ""
                 },
+                "building/stadium": {
+                    "name": "Stadium Building",
+                    "terms": ""
+                },
                 "building/static_caravan": {
                     "name": "Static Mobile Home",
+                    "terms": ""
+                },
+                "building/temple": {
+                    "name": "Temple Building",
                     "terms": ""
                 },
                 "building/terrace": {
                     "name": "Row Houses",
                     "terms": "home,terrace,brownstone,family,residence,dwelling"
+                },
+                "building/transportation": {
+                    "name": "Transportation Building",
+                    "terms": ""
                 },
                 "building/university": {
                     "name": "University Building",
