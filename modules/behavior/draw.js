@@ -168,7 +168,7 @@ export function behaviorDraw(context) {
         }
 
         var mode = context.mode();
-        if (d3_event.shiftKey && (mode.id === 'add-area' || mode.id === 'add-line')) {
+        if (d3_event.shiftKey && mode.id === 'add-area') {
             mode.option = 'draw-orthogonal';
             d3_event.preventDefault();
             d3_event.stopPropagation();
