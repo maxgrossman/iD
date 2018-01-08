@@ -1,7 +1,10 @@
 import _clone from 'lodash-es/clone';
 import { t } from '../util/locale';
 
-import { event as d3_event } from 'd3-selection';
+import { 
+    event as d3_event,
+    select as d3_select
+ } from 'd3-selection';
 
 import {
     actionAddMidpoint,
@@ -87,6 +90,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             actionAddEntity(segment));
     }
 
+    d3_select('.' + end.id).style('display', 'none');
     // related code
     // - `mode/drag_node.js`     `doMode()`
     // - `behavior/draw.js`      `click()`
@@ -156,14 +160,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             var selfNode = isOrthogonal ? [ortho1.id, ortho2.id][i] : end.id;
             var selfWay = (isOrthogonal || isClosed) ? wayId : segment.id;
 
-            // if (entity) { // snap to target entity unless dealing with it's self...
-            //     if (entity.type === 'node' && entity.id !== selfNode) {
-            //         loc = entity.loc;
-            //     } else if (entity.type === 'way' && entity.id !== selfWay) {
-            //         loc = geoChooseEdge(context.childNodes(entity), point, context.projection).loc;
-            //     }
-            // }
-
             if (nodeLoc && datum.id !== selfNode) { // snap to node/vertex - a point target with `.loc`
                 loc = nodeLoc;
             
@@ -178,10 +174,13 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
                     }
                 }
             }
+            
+            // hide end node?
             context.replace(actionMoveNode(selfNode, loc));
             context.replace(actionMoveNode(end.id, loc));
             end = context.entity(end.id);
-	        checkGeometry(true);
+            checkGeometry(true);
+
         }
     }
 
@@ -384,6 +383,7 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             if (!entity) continue;
             if (entity.id === origWay.nodes[0] || entity.id === origWay.nodes[1]) return;
         }
+
         // for each target, 
         // create a node OR snap it to existing entity...
         for (i = 0; i < targets.length; i++) {
@@ -444,7 +444,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
                 }
             }
         }
-
         context.perform(actionChangeTags(wayId, { building: 'yes' }));
         checkGeometry(true);
         context.enter(modeSelect(context, [wayId]).newFeature(true));
