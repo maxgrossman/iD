@@ -90,35 +90,8 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             actionAddEntity(segment));
     }
 
+    // current 'hacky' solution for hiding end entity
     d3_select('.' + end.id).style('display', 'none');
-    // related code
-    // - `mode/drag_node.js`     `doMode()`
-    // - `behavior/draw.js`      `click()`
-    // - `behavior/draw_way.js`  `move()`
-    // function move(datum) {
-    //     var nodeLoc = datum && datum.properties && datum.properties.entity && datum.properties.entity.loc;
-    //     var nodeGroups = datum && datum.properties && datum.properties.nodes;
-    //     var loc = context.map().mouseCoordinates();
-
-    //     if (nodeLoc) {   // snap to node/vertex - a point target with `.loc`
-    //         loc = nodeLoc;
-
-    //     } else if (nodeGroups) {   // snap to way - a line target with `.nodes`
-    //         var best = Infinity;
-    //         for (var i = 0; i < nodeGroups.length; i++) {
-    //             var childNodes = nodeGroups[i].map(function(id) { return context.entity(id); });
-    //             var choice = geoChooseEdge(childNodes, context.mouse(), context.projection, end.id);
-    //             if (choice && choice.distance < best) {
-    //                 best = choice.distance;
-    //                 loc = choice.loc;
-    //             }
-    //         }
-    //     }
-
-    //     context.replace(actionMoveNode(end.id, loc));
-	//     checkGeometry(true);
-
-    // }
 
     // Check whether this edit causes the geometry to break.
     // If so, class the surface with a nope cursor.
@@ -146,10 +119,8 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
         return false;
     }
 
-    // related code
-    // - `mode/drag_node.js`     `doMode()`
-    // - `behavior/draw.js`      `click()`
-    // - `behavior/draw_way.js`  `move()`
+    // mirrors `move()`, plus some orthogonal specific condionalities
+    // to update graph w/ location of way endpoints on `move` event
     function moveNew(targets) {
         for (var i = 0; i < targets.length; i++) {
             var datum = targets[i].entity;
@@ -175,7 +146,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
                 }
             }
             
-            // hide end node?
             context.replace(actionMoveNode(selfNode, loc));
             context.replace(actionMoveNode(end.id, loc));
             end = context.entity(end.id);
@@ -225,7 +195,6 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             context.enter(modeBrowse(context));
         }
     }
-
 
     function setActiveElements() {
         var active = isOrthogonal ? [wayId, ortho1.id, ortho2.id] : 
@@ -384,8 +353,8 @@ export function behaviorDrawWay(context, wayId, index, mode, startGraph) {
             if (entity.id === origWay.nodes[0] || entity.id === origWay.nodes[1]) return;
         }
 
-        // for each target, 
-        // create a node OR snap it to existing entity...
+        // for each target, create a node OR 
+        // snap it to existing entity...
         for (i = 0; i < targets.length; i++) {
             target = targets[i];
             entity = target.entity;

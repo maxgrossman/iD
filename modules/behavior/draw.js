@@ -95,8 +95,9 @@ export function behaviorDraw(context) {
             var points = [q0, q1];
             var candidates = d3_selectAll('.layer-osm.layer-points > .layer-points-targets > .node.active');
             // TODO: Make the entity select more direct.
-            // current select sets target to closest`candidate`
-            // in `candidates`...
+            // current select sets target to closest`candidate` in `candidates`...
+            // motivation here was due to the apparent direct `elementFromPoint` 
+            // not returning the active points, but the whole svg...
             return _map(points, function(p, i) {
 
                 var pointLoc = context.projection.invert(p);
@@ -112,6 +113,7 @@ export function behaviorDraw(context) {
                 var d = candidateTarget && 
                     candidateTarget.properties && 
                     candidateTarget.properties.target ? candidateTarget : {};
+
                 var entity = d && d.properties.entity; 
 
                 return {
@@ -265,7 +267,6 @@ export function behaviorDraw(context) {
             }
         }
 
-        // dispatch.call('click', this, context.map().mouseCoordinates());
     }
 
 
