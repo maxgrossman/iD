@@ -3,6 +3,10 @@ var translations = Object.create(null);
 export var currentLocale = 'en';
 export var textDirection = 'ltr';
 
+export function getLocale() {
+    return currentLocale;
+}
+
 export function setLocale(_) {
     if (translations[_] !== undefined) {
         currentLocale = _;
