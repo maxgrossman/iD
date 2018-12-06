@@ -71,5 +71,59 @@ describe('iD.serviceOsmose', function() {
         });
     });
 
-    describe('#serialize', function() {});
+    describe('#serialize', function() {
+        it('turns osmose response into array of osmoseError objects', function() {
+            var apiResponse = {
+                description: [
+                    'lat',
+                    'lon',
+                    'error_id',
+                    'item',
+                    'source',
+                    'class',
+                    'elems',
+                    'subclass',
+                    'subtitle',
+                    'title',
+                    'level',
+                    'update',
+                ],
+                errors: [
+                    [
+                        '18.5608574',
+                        '-74.2582846',
+                        '21288888357',
+                        '0',
+                        '1541',
+                        '2',
+                        'way392866405_way392866403',
+                        '0',
+                        '',
+                        'Large building intersection',
+                        '2',
+                        '2018-12-04 21:14:03+00:00',
+                        ''
+                    ],
+                    [
+                        '18.5467966',
+                        '-74.2555612',
+                        '21288888358',
+                        '0',
+                        '1541',
+                        '1',
+                        'way392867376_way392867372',
+                        '0',
+                        '',
+                        'Building intersection',
+                        '3',
+                        '2018-12-04 21:14:03+00:00',
+                        ''
+                    ]
+                ]
+            };
+            osmose.serialize(apiResponse).forEach(function (error) {
+                expect(error).instanceOf(iD.OsmoseError);
+            });
+        });
+    });
 });

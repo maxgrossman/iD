@@ -35,6 +35,7 @@ export { geoVecInterp as geoInterp } from './geo/vector';
 export { geoVecFloor as geoRoundCoordinates } from './geo/vector';
 export { geoVecLength as geoEuclideanDistance } from './geo/vector';
 export { osmEntity as Entity } from './osm/entity';
+export { osmoseError as OsmoseError } from './validations/osmose_error';
 export { osmNode as Node } from './osm/node';
 export { osmRelation as Relation } from './osm/relation';
 export { osmWay as Way } from './osm/way';

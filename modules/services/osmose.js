@@ -1,20 +1,25 @@
 import { osmoseError } from '../validations/osmose_error';
 import { 
     utilQsString,
-    utilRebind 
+    utilRebind, 
+    utilTiler
 } from '../util'; 
 import { getLocale } from '../util/locale';
-import { geoExtent } from '../geo';
+import { geoExtent, geoScaleToZoom } from '../geo';
 import { json as d3_json } from 'd3-request';
 import { dispatch as d3_dispatch } from 'd3-dispatch';
+import _find from 'lodash-es/find';
+import _forEach from 'lodash-es/forEach';
 import _reduce from 'lodash-es/reduce';
 
 
-var _osmoseCache = {};
+var _osmoseCache;
 var apiBase = 'http://osmose.openstreetmap.fr/' + getLocale() + '/api/0.2/errors';
 var dispatch = d3_dispatch('loadedErrors');
+var tileZoom = 14;
+var tiler = utilTiler().zoomExtent([tileZoom, tileZoom]).skipNullIsland(true);
 
-var serializer = function(prop, value) {
+function serializer (prop, value) {
     var serializers =  {
         error_id: function() {
             return { 
@@ -43,7 +48,26 @@ var serializer = function(prop, value) {
         }
     };
     return (serializers[prop] || serializers.default)();
-};
+}
+
+function abortRequest(i) {
+    i.abort();
+}
+
+function loadTiles(projection) {
+    var currZoom = Math.floor(geoScaleToZoom(projection));
+    var tiles = tiler.getTiles(projection);
+    
+    _forEach(_osmoseCache.inflight, function(k, v) {
+        var wanted = _find(tiles, function(tile) { return k.indexOf(tile.id + ',') === 0; });
+        
+        if (!wanted) {
+            abortRequest(v);
+            delete _osmoseCache.inflight[k];
+        }
+    
+    })
+}
 
 export default {
     init: function() {
@@ -53,7 +77,10 @@ export default {
         this.event = utilRebind(this, dispatch, 'on');
     },
     reset: function() {
-        _osmoseCache = {};
+        _osmoseCache = { inflight: {}, loaded: {} };
+    },
+    loadErrors: function(projection) {
+        loadTiles(projection);
     },
     loadBounds: function(bbox) {
         var serialize = this.serialize;
@@ -79,10 +106,10 @@ export default {
             osmoseProps.loc = errors.slice(0, 2); // => [lat, lon]
             return osmoseProps;
         };
-        return errors.reduce(function(errorsMap, error) {
-            var props = serializeError(error);
-            errorsMap[error[2]] = osmoseError(props);
-            return errorsMap;
-        }, {});
+        return errors.reduce(function(errors, error) {
+            error = serializeError(error);
+            errors.push(osmoseError(error));
+            return errors;
+        }, []);
     }
 };
